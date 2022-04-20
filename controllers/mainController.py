@@ -2,11 +2,15 @@ from PyQt5.QtWidgets import QMessageBox, QTabWidget, QTreeView, QInputDialog
 
 from model.model import Model
 from views.AddBookDialog import AddBookDialog
+from views.AddLoansDialog import AddLoansDialog
 from views.AddReaderDialog import AddReaderDialog
 from views.MainWindow import MainWindow
 from views.Menus import Menus
 from views.Toolbar import Toolbar
 from views.ViewTab import ViewTab
+
+
+# todo : neither let user add empty field nor same field
 
 
 class MainController:
@@ -19,16 +23,13 @@ class MainController:
         self.menus = Menus(self)
         self.toolBar = Toolbar(self)
 
-        books_tab_titles = ["ID", "İSİM", "STOK", "SAYFA SAYISI", "YAZAR", "DOLAP NO", "DİL", "TÜR", "YAYINEVİ",
-                            "DURUM", "YAYIN TARİHİ"]
-
-        readers_tab_titles = ["ID", "İSİM", "SOYİSİM", "EMAİL", "ADRES", "TELEFON NUMARASI"]
-
-        self.booksTab = ViewTab(self, books_tab_titles, self.model.TABLE_BOOKS)
-        self.readersTab = ViewTab(self, readers_tab_titles, self.model.TABLE_READERS)
+        self.booksTab = ViewTab(self, self.model.books_tab_titles, self.model.TABLE_BOOKS)
+        self.readersTab = ViewTab(self, self.model.readers_tab_titles, self.model.TABLE_READERS)
+        self.loansTab = ViewTab(self, self.model.loans_tab_titles, self.model.TABLE_LOANS)
 
         self.addBookDialog = AddBookDialog(self)
         self.addReaderDialog = AddReaderDialog(self)
+        self.addLoansDialog = AddLoansDialog(self)
 
     # starters
     def main(self):
@@ -38,11 +39,13 @@ class MainController:
 
         self.booksTab.main()
         self.readersTab.main()
+        self.loansTab.main()
 
     def tabs(self):
         tab = QTabWidget()
         tab.addTab(self.booksTab, self.model.BOOKS)
         tab.addTab(self.readersTab, self.model.READERS)
+        tab.addTab(self.loansTab, self.model.LOANS)
         self.mainWindow.setCentralWidget(tab)
 
     # table loaders
@@ -50,6 +53,7 @@ class MainController:
     def remove_data(self):
         self.booksTab.tableModel.setRowCount(0)
         self.readersTab.tableModel.setRowCount(0)
+        self.loansTab.tableModel.setRowCount(0)
 
     def append_data(self, which: str, data: tuple):
         table_model = None
@@ -59,6 +63,9 @@ class MainController:
 
         elif which == self.model.TABLE_READERS:
             table_model = self.readersTab.tableModel
+
+        elif which == self.model.TABLE_LOANS:
+            table_model = self.loansTab.tableModel
 
         table_model.insertRow(0)
 
@@ -70,10 +77,11 @@ class MainController:
         cursor.execute(self.model.select_books_sql)
         books_data = cursor.fetchall()
 
-        # refresh cursor for each fetching
-        cursor = self.model.conn.cursor()
         cursor.execute(self.model.select_readers_sql)
         readers_data = cursor.fetchall()
+
+        cursor.execute(self.model.select_loans_sql)
+        loans_data = cursor.fetchall()
 
         self.remove_data()
 
@@ -84,32 +92,109 @@ class MainController:
         for readers_datum in readers_data:
             self.append_data(self.model.TABLE_READERS, readers_datum)
 
+        for loans_datum in loans_data:
+            self.append_data(self.model.TABLE_LOANS, loans_datum)
+
     # sql listeners
 
     def insert_book(self):
+        # todo : do not add status id from here instead add it from 'insert_loan' function()
         row_id = self.model.selected_id
         dialog = self.addBookDialog
-        contents = [ui.text() for ui in dialog.uis]
-        name, surname, phone, mother_name, father_name, job, workplace, loc = contents
+        name = dialog.edit_name.text()
+        stock = dialog.edit_stock.text()
+        page = dialog.edit_page.text()
+        selected_author = dialog.combo_author.currentIndex()
+        selected_case = dialog.combo_case.currentIndex()
+        selected_lang = dialog.combo_lang.currentIndex()
+        selected_genre = dialog.combo_genre.currentIndex()
+        selected_house = dialog.combo_publish_house.currentIndex()
+        selected_status = dialog.combo_status.currentIndex()
+        publish_date = dialog.date_publish.selectedDate().toPyDate()
         details = dialog.text_details.toPlainText()
-        married = dialog.check_married.isChecked()
+
+        author_id = dialog.author_ids[selected_author]
+        case_id = dialog.case_ids[selected_case]
+        lang_id = dialog.lang_ids[selected_lang]
+        genre_id = dialog.genre_ids[selected_genre]
+        house_id = dialog.house_ids[selected_house]
+        status_id = dialog.status_ids[selected_status]
 
         if row_id is None:
-            sql = "INSERT INTO people(id, name, surname, phone, mother_name, father_name, job, workplace_name, " \
-                  "person_loc, married, details) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            sql = "INSERT INTO book(id, name, stock, page_count, author_id, case_id, language_id, genre_id, " \
+                  "publish_house_id, status_id, publish_year, details) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            self.mainWindow.statusBar().showMessage("Veri eklendi")
 
         else:
-            sql = "UPDATE people " \
-                  "SET id = ?, name = ?, surname = ?, phone = ?, mother_name = ?, father_name = ?, job = ?, " \
-                  "workplace_name = ?, person_loc = ?, married = ?, details = ? " \
+            sql = "UPDATE book " \
+                  "SET id = ?, name = ?, stock = ?, page_count = ?, author_id = ?, case_id = ?, language_id = ?, " \
+                  "genre_id = ?, publish_house_id = ?, status_id = ?, publish_year = ?, details = ? " \
                   f"WHERE id = {row_id}"
+            self.mainWindow.statusBar().showMessage("Veri düzenlendi")
 
-        row = (row_id, name, surname, phone, mother_name, father_name, job, workplace, loc, married, details)
+        row = (
+            row_id, name, stock, page, author_id, case_id, lang_id, genre_id, house_id, status_id, publish_date, details
+        )
         cursor = self.model.conn.cursor()
 
         cursor.execute(sql, row)
         self.model.conn.commit()
-        self.addBookDialog.close()
+        dialog.close()
+        self.reload_tables()
+
+    def insert_reader(self):
+        row_id = self.model.selected_id
+        dialog = self.addReaderDialog
+        contents = [ui.text() for ui in dialog.uis]
+        name, surname, email, phone = contents
+        address = dialog.text_address.toPlainText()
+        details = dialog.text_details.toPlainText()
+
+        if row_id is None:
+            sql = "INSERT INTO reader(id, name, surname, email, address, phone, details) VALUES(?, ?, ?, ?, ?, ?, ?)"
+            self.mainWindow.statusBar().showMessage("Veri eklendi")
+
+        else:
+            sql = "UPDATE reader " \
+                  "SET id = ?, name = ?, surname = ?, phone = ?, details = ? " \
+                  f"WHERE id = {row_id}"
+            self.mainWindow.statusBar().showMessage("Veri düzenlendi")
+
+        row = (row_id, name, surname, email, address, phone, details)
+        cursor = self.model.conn.cursor()
+
+        cursor.execute(sql, row)
+        self.model.conn.commit()
+        dialog.close()
+        self.reload_tables()
+
+    def insert_loan(self):
+        row_id = self.model.selected_id
+        dialog = self.addLoansDialog
+        selected_book = dialog.combo_book.currentIndex()
+        selected_reader = dialog.combo_reader.currentIndex()
+        loan_date = dialog.date_loaned.selectedDate().toPyDate()
+        details = dialog.text_details.toPlainText()
+
+        book_id = dialog.book_ids[selected_book]
+        reader_id = dialog.reader_ids[selected_reader]
+
+        if row_id is None:
+            sql = "INSERT INTO loans(id, book_id, reader_id, loaned_date, details) VALUES(?, ?, ?, ?, ?)"
+            self.mainWindow.statusBar().showMessage("Veri eklendi")
+
+        else:
+            sql = "UPDATE loans " \
+                  "SET id = ?, book_id = ?, reader_id = ?, loaned_date = ?, details = ? " \
+                  f"WHERE id = {row_id}"
+            self.mainWindow.statusBar().showMessage("Veri düzenlendi")
+
+        row = (row_id, book_id, reader_id, loan_date, details)
+        cursor = self.model.conn.cursor()
+
+        cursor.execute(sql, row)
+        self.model.conn.commit()
+        dialog.close()
         self.reload_tables()
 
     # table listeners
@@ -128,7 +213,7 @@ class MainController:
     # listeners
     def action_manage_add(self) -> None:
         selected, _ = QInputDialog.getItem(self.mainWindow, self.model.title, "Seç : ",
-                                           [self.model.BOOKS, self.model.READERS], 0, False)
+                                           [self.model.BOOKS, self.model.READERS, self.model.LOANS], 0, False)
 
         if _:
             self.model.deselect()
@@ -143,6 +228,10 @@ class MainController:
                 self.addReaderDialog.refactor()
                 self.addReaderDialog.show()
 
+            elif selected == self.model.LOANS:
+                self.addLoansDialog.refactor()
+                self.addLoansDialog.show()
+
     def action_manage_del(self) -> None:
         if self.model.is_selected():
             confirm = QMessageBox.question(self.mainWindow, self.mainWindow.windowTitle(),
@@ -156,35 +245,39 @@ class MainController:
                 try:
                     cursor.execute(sql)
                     self.model.conn.commit()
+
                 except Exception as exc:
                     QMessageBox.critical(self.mainWindow, self.mainWindow.windowTitle(), "Veri silinemedi!\n"
                                                                                          f"Hata : {str(exc)}")
+                    self.mainWindow.statusBar().showMessage("Veri silinemedi")
 
                 else:
                     self.model.deselect()
                     self.menus.disable()
                     self.toolBar.disable()
                     self.reload_tables()
-                    QMessageBox.information(self.mainWindow, self.mainWindow.windowTitle(), "Veri silindi")
+                    self.mainWindow.statusBar().showMessage("Veri silindi")
 
     def action_manage_edit(self) -> None:
         if self.model.is_selected():
             dialog = data = None
             cursor = self.model.conn.cursor()
 
+            # todo : try to get selected combobox from database
             if self.model.selected_table == self.model.TABLE_BOOKS:
-                sql = "SELECT name, surname, phone, mother_name, father_name, job, workplace_name, person_loc, " \
-                      f"details FROM people WHERE id={self.model.selected_id}"
+                sql = f"SELECT name FROM book WHERE id={self.model.selected_id}"
                 cursor.execute(sql)
                 data = cursor.fetchone()
                 dialog = self.addBookDialog
 
             elif self.model.selected_table == self.model.TABLE_READERS:
-                sql = "SELECT domain, public_url, dns, organization, details FROM website " \
-                      f"WHERE id={self.model.selected_id}"
+                sql = f"SELECT name, surname, email, phone FROM reader WHERE id={self.model.selected_id}"
                 cursor.execute(sql)
                 data = cursor.fetchone()
                 dialog = self.addReaderDialog
+
+            elif self.model.selected_table == self.model.TABLE_LOANS:
+                dialog = self.addLoansDialog
 
             for i in range(len(dialog.uis)):
                 dialog.uis[i].setText(data[i])
@@ -200,6 +293,7 @@ class MainController:
 
             # 0 is the first argument of data we are interested of
             data = cursor.fetchone()[0]
+            data = "Detay yok" if data is None else data
             QMessageBox.information(self.mainWindow, self.mainWindow.windowTitle(), f"Detaylar : '{data}'")
 
     def action_manage_exit(self) -> bool:

@@ -13,19 +13,37 @@ class Model:
         self.encoding = "UTF-8"
         self.title = "Kütüphane Uygulaması"
 
-        self.TABLE_BOOKS = "books"
-        self.TABLE_READERS = "readers"
+        self.TABLE_BOOKS = "book"
+        self.TABLE_READERS = "reader"
+        self.TABLE_LOANS = "loans"
 
         self.BOOKS = "Kitaplar"
         self.READERS = "Okuyucular"
+        self.LOANS = "Ödünç Alma"
+
+        self.books_tab_titles = ["ID", "İSİM", "STOK", "SAYFA SAYISI", "YAZAR", "DOLAP NO", "DİL", "TÜR", "YAYINEVİ",
+                                 "DURUM", "YAYIN TARİHİ"]
+        self.readers_tab_titles = ["ID", "İSİM", "SOYİSİM", "EMAİL", "ADRES", "TELEFON NUMARASI"]
+        self.loans_tab_titles = ["ID", "KİTAP ADI", "OKUYUCU ADI", "ÖDÜNÇ ALIM TARİHİ"]
 
         self.selected_table = None
         self.selected_row = None
         self.selected_id = None
 
-        # todo : write sql code for selecting all information except details from specific tables
-        self.select_books_sql = ""
-        self.select_readers_sql = ""
+        self.select_books_sql = """SELECT b.id, b.name, b.stock, b.page_count, a.name, bc.case_number, l.language,
+                                bg.genre, ph.publish_house, s.status, b.publish_year, b.details
+                                FROM book AS b
+                                INNER JOIN authors a on a.id = b.author_id
+                                INNER JOIN book_case bc on bc.id = b.case_id
+                                INNER JOIN languages l on l.id = b.language_id
+                                INNER JOIN book_genres bg on bg.id = b.genre_id
+                                INNER JOIN publish_houses ph on ph.id = b.publish_house_id
+                                INNER JOIN statuses s on s.id = b.status_id;"""
+        self.select_readers_sql = "SELECT id, name, surname, email, address, phone from reader;"
+        self.select_loans_sql = """select l.id, b.name, r.name, l.loaned_date
+                                    from loans as l
+                                    inner join book b on b.id = l.book_id
+                                    inner join reader r on r.id = l.reader_id;"""
 
         self.img_assets = os.path.join(self.root, "assets", "img")
         self.css_assets = os.path.join(self.root, "assets", "css")
