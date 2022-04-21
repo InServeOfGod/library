@@ -17,8 +17,9 @@ class Menus(Actions):
         self.shortcuts()
 
     def _actions(self):
-        manage_actions = [self.manage_add, self.manage_del, self.manage_edit,
-                          self.manage_show_det, self.manage_exit]
+        manage_actions = [self.manage_add, self.manage_add_author, self.manage_add_case, self.manage_add_genre,
+                          self.manage_add_house, self.manage_del, self.manage_edit, self.manage_show_det,
+                          self.manage_exit]
         view_actions = [self.view_full, self.view_menu, self.view_toolbar, self.view_dark]
         help_actions = [self.help_help, self.help_about]
 

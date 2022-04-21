@@ -7,7 +7,11 @@ class Actions:
         self.controller = controller
         self.model = self.controller.model
 
-        self.manage_add = QAction(self.model.add_icon, "Ekle")
+        self.manage_add = QAction(self.model.add_icon, "Yeni Satır Ekle")
+        self.manage_add_author = QAction(self.model.add_author_icon, "Yazar Ekle")
+        self.manage_add_case = QAction(self.model.add_case_icon, "Dolap Numarası Ekle")
+        self.manage_add_genre = QAction(self.model.add_genre_icon, "Kitap Türü Ekle")
+        self.manage_add_house = QAction(self.model.add_house_icon, "Yayın Evi Ekle")
         self.manage_del = QAction(self.model.del_icon, "Sil")
         self.manage_edit = QAction(self.model.edit_icon, "Düzenle")
         self.manage_show_det = QAction(self.model.show_det_icon, "Detay Göster")
@@ -65,6 +69,10 @@ class Actions:
 
     def _triggers(self):
         self.manage_add.triggered.connect(self.controller.action_manage_add)
+        self.manage_add_author.triggered.connect(self.controller.action_manage_add_author)
+        self.manage_add_case.triggered.connect(self.controller.action_manage_add_case)
+        self.manage_add_genre.triggered.connect(self.controller.action_manage_add_genre)
+        self.manage_add_house.triggered.connect(self.controller.action_manage_add_house)
         self.manage_del.triggered.connect(self.controller.action_manage_del)
         self.manage_edit.triggered.connect(self.controller.action_manage_edit)
         self.manage_show_det.triggered.connect(self.controller.action_manage_show_det)

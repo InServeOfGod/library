@@ -1,5 +1,4 @@
-from PyQt5.QtWidgets import QVBoxLayout, QFormLayout, QLineEdit, QDialog, QPushButton, QTextEdit, QSpinBox, \
-    QComboBox, QCalendarWidget
+from PyQt5.QtWidgets import QFormLayout, QLineEdit, QDialog, QPushButton, QTextEdit, QSpinBox,QComboBox, QCalendarWidget
 
 
 class AddBookDialog(QDialog):
@@ -9,7 +8,6 @@ class AddBookDialog(QDialog):
         self.controller = controller
         self.model = self.controller.model
 
-        self.mainLayout = QVBoxLayout()
         self.formLayout = QFormLayout()
 
         self.edit_name = QLineEdit()
@@ -20,10 +18,11 @@ class AddBookDialog(QDialog):
         self.combo_lang = QComboBox()
         self.combo_genre = QComboBox()
         self.combo_publish_house = QComboBox()
-        self.combo_status = QComboBox()
         self.date_publish = QCalendarWidget()
         self.text_details = QTextEdit()
         self.btn_submit = QPushButton("Ekle")
+
+        self.combos = [self.combo_author, self.combo_case, self.combo_lang, self.combo_genre, self.combo_publish_house]
 
         self.author_names = []
         self.author_ids = []
@@ -40,12 +39,8 @@ class AddBookDialog(QDialog):
         self.house_names = []
         self.house_ids = []
 
-        self.status_names = []
-        self.status_ids = []
-
         self.uis = [self.edit_name]
 
-        self._checkboxes()
         self._ui()
 
     def refactor(self):
@@ -55,13 +50,12 @@ class AddBookDialog(QDialog):
         # we do not want to include text_details variable, so we make it separated
         self.text_details.setText("")
 
-    def _checkboxes(self):
+    def checkboxes(self):
         author_sql = "SELECT id, name FROM authors;"
-        case_sql = "SELECT id, case_number FROM book_case;"
+        case_sql = "SELECT id, case_number FROM book_cases;"
         lang_sql = "SELECT id, language FROM languages;"
         genre_sql = "SELECT id, genre FROM book_genres;"
         house_sql = "SELECT id, publish_house FROM publish_houses;"
-        status_sql = "SELECT id, status FROM statuses;"
         cursor = self.model.conn.cursor()
 
         cursor.execute(author_sql)
@@ -79,8 +73,20 @@ class AddBookDialog(QDialog):
         cursor.execute(house_sql)
         house_data = cursor.fetchall()
 
-        cursor.execute(status_sql)
-        status_data = cursor.fetchall()
+        self.author_ids.clear()
+        self.author_names.clear()
+
+        self.case_ids.clear()
+        self.case_numbers.clear()
+
+        self.lang_ids.clear()
+        self.lang_names.clear()
+
+        self.genre_ids.clear()
+        self.genre_names.clear()
+
+        self.house_ids.clear()
+        self.house_names.clear()
 
         for _, datum in author_data:
             self.author_ids.append(_)
@@ -102,14 +108,8 @@ class AddBookDialog(QDialog):
             self.house_ids.append(_)
             self.house_names.append(datum)
 
-        for _, datum in status_data:
-            self.status_ids.append(_)
-            self.status_names.append(datum)
-
-    def _ui(self):
-        self.setWindowTitle(self.model.title)
-        self.setWindowIcon(self.model.icon)
-        self.setLayout(self.formLayout)
+        for combo in self.combos:
+            combo.clear()
 
         for author_name in self.author_names:
             self.combo_author.addItem(author_name)
@@ -126,14 +126,18 @@ class AddBookDialog(QDialog):
         for house_name in self.house_names:
             self.combo_publish_house.addItem(house_name)
 
-        for status_name in self.status_names:
-            self.combo_status.addItem(status_name)
+    def _ui(self):
+        self.setWindowTitle(self.model.title)
+        self.setWindowIcon(self.model.icon)
+        self.setLayout(self.formLayout)
 
         self.btn_submit.setText("Ekle")
         self.btn_submit.clicked.connect(self.controller.insert_book)
 
         self.edit_stock.setMinimum(0)
         self.edit_page.setMinimum(1)
+        self.edit_stock.setMaximum(1000000)
+        self.edit_page.setMaximum(10000)
         self.text_details.setPlaceholderText("Buraya yazın...")
 
         self.formLayout.addRow("Ad : ", self.edit_name)
@@ -144,7 +148,6 @@ class AddBookDialog(QDialog):
         self.formLayout.addRow("Dil : ", self.combo_lang)
         self.formLayout.addRow("Tür ", self.combo_genre)
         self.formLayout.addRow("Yayınevi : ", self.combo_publish_house)
-        self.formLayout.addRow("Durum : ", self.combo_status)
         self.formLayout.addRow("Yayın Tarihi : ", self.date_publish)
         self.formLayout.addRow("Detaylar : ", self.text_details)
         self.formLayout.addWidget(self.btn_submit)

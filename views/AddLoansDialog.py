@@ -17,6 +17,8 @@ class AddLoansDialog(QDialog):
         self.text_details = QTextEdit()
         self.btn_submit = QPushButton("Ekle")
 
+        self.combos = [self.combo_book, self.combo_reader]
+
         self.book_names = []
         self.book_ids = []
 
@@ -25,16 +27,15 @@ class AddLoansDialog(QDialog):
 
         self.uis = []
 
-        self._checkboxes()
         self._ui()
 
     def refactor(self):
         # we do not want to include text_details variable, so we make it separated
         self.text_details.setText("")
 
-    def _checkboxes(self):
-        book_sql = "SELECT id, name FROM book;"
-        reader_sql = "SELECT id, name FROM reader;"
+    def checkboxes(self):
+        book_sql = "SELECT id, name FROM books;"
+        reader_sql = "SELECT id, name FROM readers;"
 
         cursor = self.model.conn.cursor()
 
@@ -44,6 +45,12 @@ class AddLoansDialog(QDialog):
         cursor.execute(reader_sql)
         reader_data = cursor.fetchall()
 
+        self.book_ids.clear()
+        self.book_names.clear()
+
+        self.reader_ids.clear()
+        self.reader_names.clear()
+
         for _, datum in book_data:
             self.book_ids.append(_)
             self.book_names.append(datum)
@@ -51,6 +58,15 @@ class AddLoansDialog(QDialog):
         for _, datum in reader_data:
             self.reader_ids.append(_)
             self.reader_names.append(datum)
+
+        for combo in self.combos:
+            combo.clear()
+
+        for book_name in self.book_names:
+            self.combo_book.addItem(book_name)
+
+        for reader_name in self.reader_names:
+            self.combo_reader.addItem(reader_name)
 
     def _ui(self):
         self.setWindowTitle(self.model.title)
@@ -61,12 +77,6 @@ class AddLoansDialog(QDialog):
         self.btn_submit.clicked.connect(self.controller.insert_loan)
 
         self.text_details.setPlaceholderText("Buraya yazın...")
-
-        for book_name in self.book_names:
-            self.combo_book.addItem(book_name)
-
-        for reader_name in self.reader_names:
-            self.combo_reader.addItem(reader_name)
 
         self.formLayout.addRow("Kitap Adı : ", self.combo_book)
         self.formLayout.addRow("Okuyucu Adı : ", self.combo_reader)

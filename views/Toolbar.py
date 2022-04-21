@@ -16,6 +16,10 @@ class Toolbar(Actions):
 
     def _actions(self):
         self.toolbar.addAction(self.manage_add)
+        self.toolbar.addAction(self.manage_add_author)
+        self.toolbar.addAction(self.manage_add_case)
+        self.toolbar.addAction(self.manage_add_genre)
+        self.toolbar.addAction(self.manage_add_house)
         self.toolbar.addAction(self.manage_edit)
         self.toolbar.addAction(self.manage_del)
         self.toolbar.addAction(self.manage_show_det)
